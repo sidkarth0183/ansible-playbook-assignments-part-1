@@ -1,1 +1,36 @@
+1. Write a Ansible Playbook to create a group called “dba”
 
+cat /etc/ansible/hosts
+
+[ars_servers]
+ars-server-1
+ars-server-2
+[acs_server]
+acs-server
+[all:children]
+ars_servers
+acs_server
+
+
+cat /etc/ansible/playbooks/create_group.yml
+
+---
+- name: This playbook is for creating a group called dba
+  hosts: all
+  remote_user: ec2-user
+  vars:
+    groupname: "dba"
+    desiredstate: "present"
+  tasks:
+  - name: create a group called dba
+    group: name={{groupname}} state={{desiredstate}}
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: show how debug works
+    debug:
+      msg: "{{ansible_distribution}}"
+
+...
+
+ansible-playbook --inventory-file="/etc/ansible/hosts" /etc/ansible/playbooks/create_group.yml --key-file=acs-key.pem
