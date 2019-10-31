@@ -1,4 +1,5 @@
-1. Write a Ansible Playbook to create a group called “dba”
+Problem - 1. Write a Ansible Playbook to create a group called “dba”
+============
 
 cat /etc/ansible/hosts
 
@@ -34,3 +35,393 @@ cat /etc/ansible/playbooks/create_group.yml
 ...
 
 ansible-playbook --inventory-file="/etc/ansible/hosts" /etc/ansible/playbooks/create_group.yml --key-file=acs-key.pem
+
+[root@ip-172-31-43-45 ~]# more /etc/group | grep dba
+dba:x:1002:
+[ec2-user@ip-172-31-40-163 ~]$ more /etc/group | grep dba
+dba:x:1001:
+[ec2-user@ip-172-31-39-224 ~]$ more /etc/group | grep dba
+dba:x:1001:
+
+###########################################################################################################################
+
+Problem : 2 - Write a Ansible Playbook to create a user called “dba-user” which is part of group called “dba” and with /bin/bash shell.
+===========
+
+Solution :
+--------
+
+cat /etc/ansible/playbooks/create_dba_user.yml
+
+---
+- name: This playbook is for creating a user called dba-user
+  hosts: all
+  remote_user: ec2-user
+  vars:
+    username: "dba-user"
+    desiredstate: "present"
+    groupname: "dba"
+    defaultshell: "/bin/bash"
+  tasks:
+  - name: create a user called dba-user
+    user: name={{username}} state={{desiredstate}} comment='"{{username}}" linux user part of dba group' group={{groupname}} shell={{defaultshell}}
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: show how debug works
+    debug:
+      msg: "{{ansible_distribution}}"
+
+...
+
+ansible-playbook --inventory-file="/etc/ansible/hosts" /etc/ansible/playbooks/create_dba_user.yml --key-file=acs-key.pem
+
+[root@ip-172-31-43-45 ~]# more /etc/passwd | grep dba-user
+dba-user:x:1002:1002:"dba-user" linux user part of dba group:/home/dba-user:/bin/bash
+[ec2-user@ip-172-31-40-163 ~]$ more /etc/passwd | grep dba-user
+dba-user:x:1001:1001:"dba-user" linux user part of dba group:/home/dba-user:/bin/bash
+[ec2-user@ip-172-31-39-224 ~]$ more /etc/passwd | grep dba-user
+dba-user:x:1001:1001:"dba-user" linux user part of dba group:/home/dba-user:/bin/bash
+
+##############################################################################################################################
+
+Problem : 3 - Write a Ansible Playbook to install package named “httpd” in RHEL/centos.
+===========
+
+cat /etc/ansible/playbooks/install_httpd_pkg.yml
+
+---
+- name: This playbook is for installing a Linux package called httpd using yum utility
+  hosts: all
+  remote_user: ec2-user
+  vars:
+    mypkg: "httpd"
+    desiredstate: "present"
+  tasks:
+  - name: install package httpd
+    yum: name={{mypkg}} state={{desiredstate}}
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: show how debug works
+    debug:
+      msg: "{{ansible_distribution}}"
+
+...
+
+ansible-playbook --inventory-file="/etc/ansible/hosts" /etc/ansible/playbooks/install_httpd_pkg.yml --key-file=acs-key.pem
+
+#############################################################################################################################
+
+Problem : 4 - Write a Ansible Playbook to start and enable the service named “httpd”
+===========
+
+cat /etc/ansible/playbooks/enable_httpd_svc.yml
+
+---
+- name: This playbook is for installing a Linux package called httpd using yum utility
+  hosts: all
+  remote_user: ec2-user
+  vars:
+    myservice: "httpd"
+    desiredstate: "started"
+  tasks:
+  - name: enable httpd service
+    systemd: name={{myservice}} state={{desiredstate}}
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: show how debug works
+    debug:
+      msg: "{{ansible_distribution}}"
+
+...
+
+ansible-playbook --inventory-file="/etc/ansible/hosts" /etc/ansible/playbooks/enable_httpd_svc.yml --key-file=acs-key.pem
+
+
+[ec2-user@ip-172-31-40-163 ~]$ ps -eaf | grep httpd | grep 'apache'
+apache    3396  3395  0 10:57 ?        00:00:00 /usr/sbin/httpd -DFOREGROUND
+apache    3397  3395  0 10:57 ?        00:00:00 /usr/sbin/httpd -DFOREGROUND
+apache    3398  3395  0 10:57 ?        00:00:00 /usr/sbin/httpd -DFOREGROUND
+apache    3399  3395  0 10:57 ?        00:00:00 /usr/sbin/httpd -DFOREGROUND
+
+
+############################################################################################################################
+
+Problem : 5 - Write a Ansible Playbook to create a file called “index.html” in /var/www/html with some dummy html contents.
+
+cat /etc/ansible/playbooks/create_file_with_content_in_dest_dir.yml
+
+---
+- name: This playbook is for creating a file index.html with dummy content in /var/www/html/index.html
+  hosts: all
+  remote_user: ec2-user
+  vars:
+    desiredstate: "present"
+    filepath: "/var/www/html/index.html"
+    filecontent: "<h1> Welcome all first time from  playbook</h1>"
+  tasks:
+  - name: create a file with dummy content in desired directory
+    lineinfile: path={{filepath}} state={{desiredstate}} create=yes line={{filecontent}}
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: show how debug works
+    debug:
+      msg: "{{ansible_distribution}}"
+
+...
+
+
+ansible-playbook --inventory-file="/etc/ansible/hosts" /etc/ansible/playbooks/create_file_with_content_in_dest_dir.yml --key-file=acs-key.pem
+
+#########################################################################################################################
+
+Problem : 6 - Write a Ansible Playbook to reboot a self machine.
+
+cat /etc/ansible/playbooks/reboot_server.yml
+
+---
+- name: This playbook is for rebooting a server
+  hosts: all
+  remote_user: ec2-user
+  vars:
+    msgcontent: "reboot initiated by Ansible"
+  tasks:
+  - name: "server reboot after 60 seconds"
+    reboot: reboot_timeout=60 msg={{msgcontent}}
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: show how debug works
+    debug:
+      msg: "{{ansible_distribution}}"
+
+...
+
+ansible-playbook --inventory-file="/etc/ansible/hosts" /etc/ansible/playbooks/reboot_server.yml --key-file=acs-key.pem
+
+#########################################################################################################################
+
+Problem : 7 - Write a Ansible Playbook to install a package called “git”, “wget”, "bind-utils", "nmap".
+
+Here we will try something unique that is we will try how to install a list of packages at one go on multiple servers.
+
+[root@ip-172-31-40-163 ~]# which nslookup
+/usr/bin/which: no nslookup in (/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin)
+[root@ip-172-31-40-163 ~]# which ncat
+/usr/bin/which: no ncat in (/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin)
+
+
+cat /etc/ansible/playbooks/multiple_pkg_install.yml
+
+---
+- name: This playbook is for installing multiple packages
+  hosts: all
+  remote_user: ec2-user
+  vars:
+    desiredstate: "present"
+    item:
+    - git
+    - wget
+    - bind-utils
+    - nmap
+  tasks:
+  - name: "multiple packages installation"
+    yum: pkg={{item}} state={{desiredstate}}
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: show how debug works
+    debug:
+      msg: "{{ansible_distribution}}"
+
+...
+
+ansible-playbook --inventory-file="/etc/ansible/hosts" /etc/ansible/playbooks/multiple_pkg_install.yml --key-file=acs-key.pem
+
+PLAY [This playbook is for installing multiple packages] **********************************************************************************************
+
+TASK [Gathering Facts] ********************************************************************************************************************************
+ok: [ars-server-2]
+ok: [ars-server-1]
+ok: [acs-server]
+
+TASK [multiple packages installation] *****************************************************************************************************************
+changed: [ars-server-1]
+changed: [ars-server-2]
+changed: [acs-server]
+
+TASK [show how debug works] ***************************************************************************************************************************
+ok: [ars-server-1] => {
+    "msg": "RedHat"
+}
+ok: [ars-server-2] => {
+    "msg": "RedHat"
+}
+ok: [acs-server] => {
+    "msg": "RedHat"
+}
+
+PLAY RECAP ********************************************************************************************************************************************
+acs-server                 : ok=3    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+ars-server-1               : ok=3    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+ars-server-2               : ok=3    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+[root@ip-172-31-40-163 ~]# which ncat
+/usr/bin/ncat
+[root@ip-172-31-40-163 ~]# which nslookup
+/usr/bin/nslookup
+[root@ip-172-31-40-163 ~]# which git
+/usr/bin/git
+[root@ip-172-31-40-163 ~]# which wget
+/usr/bin/wget
+
+##############################################################################################################################
+
+Problem : 8 - Write a Ansible Playbook to clone git repo. thttps://github.com/scmgalaxy/ansible-role-template
+===========
+
+[root@ip-172-31-43-45 ~]# ls -ld /localsrc/ansible-role-template
+ls: cannot access '/localsrc/ansible-role-template': No such file or directory
+
+cat /etc/ansible/playbooks/clone_git_repo.yml
+
+---
+- name: This playbook is to clone git repo
+  hosts: all
+  remote_user: ec2-user
+  vars:
+    repo_url: "https://github.com/scmgalaxy/ansible-role-template"
+    local_dest: "/localsrc/ansible-role-template"
+    local_git_dir: "/localsrc/ansible-role-template.git"
+  tasks:
+  - name: "clone git repo"
+    git: executable="/usr/bin/git" repo={{repo_url}} dest={{local_dest}} separate_git_dir={{local_git_dir}}
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: show how debug works
+    debug:
+      msg: "{{ansible_distribution}}"
+
+
+ansible-playbook --inventory-file="/etc/ansible/hosts" /etc/ansible/playbooks/clone_git_repo.yml --key-file=acs-key.pem
+
+
+[root@ip-172-31-43-45 ~]# ls -lrt /localsrc/*
+/localsrc/ansible-role-template:
+total 20
+-rw-r--r--. 1 root root  100 Oct 31 13:03 README.md
+-rw-r--r--. 1 root root 1671 Oct 31 13:03 node.pem
+-rw-r--r--. 1 root root   41 Oct 31 13:03 inventory
+drwxr-xr-x. 8 root root  109 Oct 31 13:03 bennojoy.mysql
+-rw-r--r--. 1 root root  115 Oct 31 13:03 site.yaml
+-rw-r--r--. 1 root root   10 Oct 31 13:03 site.retry
+drwxr-xr-x. 8 root root  105 Oct 31 13:03 rajesh.role1
+
+/localsrc/ansible-role-template.git:
+total 32
+drwxr-xr-x.  2 root root    6 Oct 31 13:03 branches
+-rw-r--r--.  1 root root   73 Oct 31 13:03 description
+drwxr-xr-x.  2 root root 4096 Oct 31 13:03 hooks
+drwxr-xr-x.  2 root root   21 Oct 31 13:03 info
+drwxr-xr-x. 57 root root 4096 Oct 31 13:03 objects
+drwxr-xr-x.  5 root root   46 Oct 31 13:03 refs
+-rw-r--r--.  1 root root  114 Oct 31 13:03 packed-refs
+drwxr-xr-x.  3 root root   30 Oct 31 13:03 logs
+-rw-r--r--.  1 root root  275 Oct 31 13:03 config
+-rw-r--r--.  1 root root   23 Oct 31 13:03 HEAD
+-rw-r--r--.  1 root root   41 Oct 31 13:03 ORIG_HEAD
+-rw-r--r--.  1 root root 3019 Oct 31 13:03 index
+
+############################################################################################################################
+
+Problem : 9 - Now Merge all Top Playbook into one and run and verify
+
+Complete Playbook :
+==================
+
+---
+- name: This playbook is for performing multiple configurations in parallel on multiple servers
+  hosts: all
+  remote_user: ec2-user
+  vars:
+    username: "ftp-usr"
+    groupname: "ftp-grp"
+    desiredstate: "present"
+    defaultshell: "/bin/bash"
+    mypkg: "httpd"
+    mysvc: "httpd"
+    desiredsvcstate: "started"
+    filepath: "/var/www/html/index.html"
+    filecontent: "<h1> Welcome all first time from  playbook</h1>"
+    msgcontent: "reboot initiated by Ansible"
+    item:
+    - git
+    - wget
+    - bind-utils
+    - nmap
+    - ftp
+    - nginx
+    repo_url: "https://github.com/scmgalaxy/ansible-role-template"
+    local_dest: "/testsrc/ansible-role-template"
+    local_git_dir: "/testsrc/ansible-role-template.git"
+  tasks:
+  - name: create a group called ftp-grp
+    group: name={{groupname}} state={{desiredstate}}
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: create a user called ftp-usr
+    user: name={{username}} state={{desiredstate}} comment='"{{username}}" linux user part of dba group' group={{groupname}} shell={{defaultshell}}
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: install package httpd
+    yum: name={{mypkg}} state={{desiredstate}}
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: enable httpd service
+    systemd: name={{mysvc}} state={{desiredsvcstate}}
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: create a file with dummy content in desired directory
+    lineinfile: path={{filepath}} state={{desiredstate}} create=yes line={{filecontent}}
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: "multiple packages installation"
+    yum: pkg={{item}} state={{desiredstate}}
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: "clone git repo"
+    git: executable="/usr/bin/git" repo={{repo_url}} dest={{local_dest}} separate_git_dir={{local_git_dir}}
+    become: yes
+    become_user: root
+    become_method: sudo
+  - name: "server reboot after 60 seconds"
+    reboot: reboot_timeout=60 msg={{msgcontent}}
+    become: yes
+    become_user: root
+    become_method: sudo
+
+...
+
+ansible-playbook --inventory-file="/etc/ansible/hosts" /etc/ansible/playbooks/complete_full_playbook.yml --key-file=acs-key.pem
+
+After the run output is success. The entire playbook completed successfully till the end resulting in last action i.e. reboot of the servers.
+
+
+
+
+
+
+
+
+
+
