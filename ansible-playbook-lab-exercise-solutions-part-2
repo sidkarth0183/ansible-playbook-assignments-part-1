@@ -36,7 +36,7 @@ cat /etc/ansible/playbooks/create_group.yml
 
 ansible-playbook --inventory-file="/etc/ansible/hosts" /etc/ansible/playbooks/create_group.yml --key-file=acs-key.pem
 
-[root@ip-172-31-43-45 ~]# more /etc/group | grep dba
+[root@ip-172-31-43-45 ~]# more /etc/group | grep dba 
 dba:x:1002:
 [ec2-user@ip-172-31-40-163 ~]$ more /etc/group | grep dba
 dba:x:1001:
